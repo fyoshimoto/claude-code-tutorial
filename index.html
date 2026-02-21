@@ -466,6 +466,7 @@
       <a class="nav-link" href="#prompting">Prompting Tips</a>
       <a class="nav-link" href="#multi-agent">Multi-Agent</a>
       <a class="nav-link" href="#security">Security</a>
+      <a class="nav-link" href="#github-integration">GitHub Integration</a>
     </div>
   </nav>
 
@@ -1291,6 +1292,162 @@ Scan the codebase for any hardcoded secrets, API keys, or passwords
 
 <span class="cm"># Dependency audit</span>
 Run npm audit and explain which vulnerabilities are critical and how to fix them</code></pre>
+      </section>
+
+      <!-- ──────────────────────────────────────── -->
+      <!-- 20. GITHUB INTEGRATION -->
+      <!-- ──────────────────────────────────────── -->
+      <section class="section" id="github-integration">
+        <div class="section-number">Section 20</div>
+        <h2>GitHub Integration</h2>
+
+        <p>
+          <strong>Claude Code Action</strong> is an official GitHub Action that brings Claude directly into
+          your GitHub workflow. It lets you invoke Claude by mentioning <code>@claude</code> in issue
+          comments, pull request reviews, or via automated triggers — and Claude can read code, implement
+          fixes, and push commits back to the branch automatically.
+        </p>
+
+        <div class="card info">
+          <div class="card-icon">&#8505;&#65039;</div>
+          <div class="card-body">
+            <p>The action is open-source at
+            <a href="https://github.com/anthropics/claude-code-action" target="_blank">anthropics/claude-code-action</a>.
+            It runs Claude Code in a GitHub Actions runner with full access to your repository.</p>
+          </div>
+        </div>
+
+        <h3>What Claude can do inside GitHub</h3>
+        <ul>
+          <li><strong>Answer questions</strong> about the codebase in issue or PR comments</li>
+          <li><strong>Review pull requests</strong> and leave detailed feedback</li>
+          <li><strong>Implement changes</strong> from an issue and open a pull request automatically</li>
+          <li><strong>Fix failing CI</strong> when asked via a comment</li>
+          <li><strong>Explain code</strong> by reading files and responding inline</li>
+        </ul>
+
+        <h3>Setup: Add the workflow file</h3>
+        <p>Create <code>.github/workflows/claude.yml</code> in your repository:</p>
+        <div class="cmd-label"><span>.github/workflows/claude.yml</span><span class="lang">yaml</span></div>
+        <pre><code><span class="kw">name</span>: Claude Code
+<span class="kw">on</span>:
+  <span class="kw">issue_comment</span>:
+    <span class="kw">types</span>: [created]
+  <span class="kw">pull_request_review_comment</span>:
+    <span class="kw">types</span>: [created]
+  <span class="kw">issues</span>:
+    <span class="kw">types</span>: [assigned]
+  <span class="kw">pull_request_review</span>:
+    <span class="kw">types</span>: [submitted]
+
+<span class="kw">jobs</span>:
+  <span class="kw">claude</span>:
+    <span class="kw">if</span>: <span class="str">|
+      (github.event_name == 'issue_comment' &amp;&amp; contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' &amp;&amp; contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' &amp;&amp; contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' &amp;&amp; github.event.action == 'assigned')</span>
+    <span class="kw">runs-on</span>: ubuntu-latest
+    <span class="kw">permissions</span>:
+      <span class="kw">contents</span>: write
+      <span class="kw">pull-requests</span>: write
+      <span class="kw">issues</span>: write
+    <span class="kw">steps</span>:
+      - <span class="kw">uses</span>: anthropics/claude-code-action@v1
+        <span class="kw">with</span>:
+          <span class="kw">anthropic_api_key</span>: ${{ secrets.ANTHROPIC_API_KEY }}</code></pre>
+
+        <h3>Add your API key as a secret</h3>
+        <ol class="steps">
+          <li>
+            <div class="step-body">
+              Go to your repository on GitHub → <strong>Settings</strong> → <strong>Secrets and variables</strong> → <strong>Actions</strong>
+            </div>
+          </li>
+          <li>
+            <div class="step-body">
+              Click <strong>New repository secret</strong>, name it <code>ANTHROPIC_API_KEY</code>, and paste your key from
+              <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+            </div>
+          </li>
+          <li>
+            <div class="step-body">
+              Commit the workflow file and push — the action will be active immediately.
+            </div>
+          </li>
+        </ol>
+
+        <h3>Triggering Claude in GitHub</h3>
+        <p>Once installed, mention <code>@claude</code> in any issue or PR comment:</p>
+        <div class="cmd-label"><span>Example GitHub comments</span><span class="lang">markdown</span></div>
+        <pre><code><span class="cm"># Ask a question</span>
+@claude Can you explain how the auth middleware works?
+
+<span class="cm"># Request an implementation</span>
+@claude Please implement the changes described in this issue and open a PR.
+
+<span class="cm"># Request a code review</span>
+@claude Review this PR for potential security issues and performance problems.
+
+<span class="cm"># Ask for a fix</span>
+@claude The tests are failing in CI. Can you investigate and fix them?</code></pre>
+
+        <h3>Using the GitHub App (recommended)</h3>
+        <p>Instead of a PAT, you can install the official <strong>Claude GitHub App</strong> which handles
+        authentication automatically and grants fine-grained repository permissions:</p>
+        <ol>
+          <li>Visit the <a href="https://github.com/apps/claude" target="_blank">Claude GitHub App</a> page</li>
+          <li>Click <strong>Install</strong> and select the repositories to grant access</li>
+          <li>Use <code>use_bedrock</code> or <code>use_vertex</code> options in the action for enterprise setups</li>
+        </ol>
+
+        <div class="cmd-label"><span>App-based auth in workflow</span><span class="lang">yaml</span></div>
+        <pre><code>      - <span class="kw">uses</span>: anthropics/claude-code-action@v1
+        <span class="kw">with</span>:
+          <span class="kw">anthropic_api_key</span>: ${{ secrets.ANTHROPIC_API_KEY }}
+          <span class="kw">github_token</span>: ${{ secrets.GITHUB_TOKEN }}
+          <span class="cm"># Optional: restrict which users can trigger Claude</span>
+          <span class="kw">allowed_users</span>: <span class="str">"octocat,other-teammate"</span>
+          <span class="cm"># Optional: override the trigger phrase</span>
+          <span class="kw">trigger_phrase</span>: <span class="str">"@claude"</span></code></pre>
+
+        <h3>What Claude can access</h3>
+        <table>
+          <thead><tr><th>Resource</th><th>What Claude can do</th></tr></thead>
+          <tbody>
+            <tr><td>Repository files</td><td>Read all files, edit, and commit changes</td></tr>
+            <tr><td>Pull requests</td><td>Read diff, post review comments, approve (not for security)</td></tr>
+            <tr><td>Issues</td><td>Read body and comments, post replies</td></tr>
+            <tr><td>GitHub Actions</td><td>Read workflow run results and logs</td></tr>
+            <tr><td>Branches</td><td>Create new branches and push commits</td></tr>
+          </tbody>
+        </table>
+
+        <div class="card warn">
+          <div class="card-icon">&#9888;&#65039;</div>
+          <div class="card-body">
+            <p>The action cannot modify <code>.github/workflows/</code> files due to GitHub App permission
+            restrictions. It also cannot force-push to protected branches or approve its own pull requests.</p>
+          </div>
+        </div>
+
+        <h3>Advanced: custom tools and MCP in Actions</h3>
+        <p>You can extend the action with additional MCP servers or custom allowed tools:</p>
+        <div class="cmd-label"><span>Extended configuration</span><span class="lang">yaml</span></div>
+        <pre><code>      - <span class="kw">uses</span>: anthropics/claude-code-action@v1
+        <span class="kw">with</span>:
+          <span class="kw">anthropic_api_key</span>: ${{ secrets.ANTHROPIC_API_KEY }}
+          <span class="kw">allowed_tools</span>: <span class="str">"Bash,Read,Write,Edit,Glob,Grep"</span>
+          <span class="kw">mcp_config</span>: <span class="str">|
+            {
+              "mcpServers": {
+                "github": {
+                  "command": "npx",
+                  "args": ["-y", "@modelcontextprotocol/server-github"],
+                  "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${{ secrets.GH_PAT }}" }
+                }
+              }
+            }</span></code></pre>
       </section>
 
       <!-- Quick reference summary -->
