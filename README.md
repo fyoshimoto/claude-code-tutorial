@@ -29,6 +29,7 @@ Open `index.html` in any browser — no server or build step required.
 | 17 | Prompting tips |
 | 18 | Multi-agent workflows & worktrees |
 | 19 | Security best practices |
+| 20 | GitHub integration (claude-code-action, @claude mentions, setup) |
 
 ## Tech
 
